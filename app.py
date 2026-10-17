@@ -29,17 +29,26 @@ def create_pdf(nama, nik, cabor):
     doc = fitz.open(TEMPLATE_PATH)
     page = doc[0]
 
-    # Posisi di bawah menggunakan koordinat halaman template asli (A4).
-    # Hanya area titik-titik Nama, NIK, dan Cabor yang ditutup lalu diisi.
+    # Tutup seluruh baris isian lama (label, titik-titik, dan tanda baca),
+    # lalu tulis ulang dengan format konsisten: Nama :  isi
     entries = [
-        (nama, fitz.Rect(158, 299, 525, 316), (162, 312)),
-        (nik,  fitz.Rect(158, 314, 525, 331), (162, 326.6)),
-        (cabor,fitz.Rect(158, 328.6, 525, 345.6), (162, 341.2)),
+        ("Nama", nama, 301.97, 313.97),
+        ("NIK", nik, 316.61, 328.61),
+        ("Cabor", cabor, 331.25, 343.25),
     ]
-    for value, rect, point in entries:
-        page.draw_rect(rect, color=None, fill=(1, 1, 1), overlay=True)
-        fontsize = fit_font_size(value, rect.width - 8)
-        page.insert_text(point, value, fontname="helv", fontsize=fontsize,
+    for label, value, y_top, y_bottom in entries:
+        row_rect = fitz.Rect(78, y_top - 2, 530, y_bottom + 2)
+        page.draw_rect(row_rect, color=None, fill=(1, 1, 1), overlay=True)
+
+        # Kolom label, titik dua, dan isi dibuat terpisah supaya sejajar rapi.
+        baseline = y_bottom - 1
+        page.insert_text((81, baseline), label, fontname="helv", fontsize=10, color=(0, 0, 0), overlay=True)
+        page.insert_text((162, baseline), ":", fontname="helv", fontsize=10, color=(0, 0, 0), overlay=True)
+
+        value_x = 176
+        max_width = 530 - value_x - 8
+        fontsize = fit_font_size(value, max_width, start=10, min_size=7)
+        page.insert_text((value_x, baseline), value, fontname="helv", fontsize=fontsize,
                          color=(0, 0, 0), overlay=True)
 
     output = BytesIO(doc.tobytes(garbage=4, deflate=True))
